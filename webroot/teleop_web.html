@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+    <script type="text/javascript" src="https://static.robotwebtools.org/EventEmitter2/current/eventemitter2.min.js"></script>
+    <script type="text/javascript" src="https://static.robotwebtools.org/roslibjs/current/roslib.min.js"></script>
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+    <script src="https://code.jquery.com/pep/0.4.3/pep.js"></script>
+
+    <style>
+        html,
+        body {
+          overflow: hidden;
+          width: 100%;
+          height: 100%;
+          margin: 0;
+          padding: 0;
+        }
+  
+        #renderCanvas {
+          width: 100%;
+          height: 100%;
+          touch-action: none;
+        }
+      </style>
+</head>
+          
+
+
+<body>
+    <canvas id="renderCanvas" touch-action="none"></canvas>    
+
+
+    <script type="text/javascript" type="text/javascript">
+
+        const canvas = document.getElementById("renderCanvas"); // Get the canvas element
+        const engine = new BABYLON.Engine(canvas, true); // Generate the BABYLON 3D engine
+          
+          
+      // Connecting to ROS
+      // -----------------
+    
+      
+    
+      var ros = new ROSLIB.Ros({
+        url : 'wss://' + window.location.hostname + ':9090'
+      });
+    
+      ros.on('connection', function() {
+        console.log('Connected to websocket server.');
+      });
+    
+      ros.on('error', function(error) {
+        console.log('Error connecting to websocket server: ', error);
+      });
+    
+      ros.on('close', function() {
+        console.log('Connection to websocket server closed.');
+      });
+    
+      // Publishing a Topic
+      // ------------------
+    
+      var joyPub = new ROSLIB.Topic({
+        ros : ros,
+        name : '/joy',
+        messageType : 'sensor_msgs/Joy'
+      });
+    
+      const CreateTeleopScene = function () {
+        const scene = new BABYLON.Scene(engine);
+
+        var camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(0, 5, -10), scene);
+        camera.setTarget(BABYLON.Vector3.Zero());
+        var light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 1, 0), scene);        
+    
+        // Create joystick and set z index to be below playgrounds top bar
+        var leftJoystick = new BABYLON.VirtualJoystick(true);
+        BABYLON.VirtualJoystick.Canvas.style.zIndex = "4";
+    
+        scene.onBeforeRenderObservable.add(()=>{
+            if (leftJoystick.pressed) {
+                // todo
+            }
+        })
+    
+        return scene;    
+      }
+    
+      window.addEventListener("gamepadconnected", (event) => {
+        // if we have a gamepad, disable the screen controller
+        BABYLON.VirtualJoystick.Canvas.style.zIndex = "-1";
+        console.log("Gamepad connected at index %d: %s. %d buttons, %d axes.",
+            event.gamepad.index, event.gamepad.id,
+            event.gamepad.buttons.length, event.gamepad.axes.length);
+      });
+    
+      window.addEventListener("gamepaddisconnected", (event) => {
+        // if we don't have a gamepad, enable the screen controller
+        BABYLON.VirtualJoystick.Canvas.style.zIndex = "4";
+      });
+    
+      var currentScene = CreateTeleopScene();
+
+      var interval = setInterval(function () {
+        const [gp] = navigator.getGamepads();
+
+
+        if (gp != null) {
+            var leftTrigger = 0.0;
+            if (gp.buttons[6].pressed) {
+                leftTrigger = 1.0;
+            }
+
+            var rightTrigger = 0.0;
+            if (gp.buttons[6].pressed) {
+                rightTrigger = 1.0;
+            }
+
+            var joyMsg = new ROSLIB.Message({
+                axes: [gp.axes[0], gp.axes[1], leftTrigger, gp.axes[2], gp.axes[3], rightTrigger],
+                buttons: [gp.buttons[0].pressed, gp.buttons[1].pressed, gp.buttons[2].pressed, gp.buttons[3].pressed, gp.buttons[4].pressed, gp.buttons[5].pressed, gp.buttons[8].pressed, gp.buttons[9].pressed, gp.buttons[10].pressed, gp.buttons[11].pressed],
+            });
+
+            joyPub.publish(joyMsg);
+        }
+      }, 20);
+    
+      engine.runRenderLoop(function () {
+            currentScene.render();
+    
+          });
+    
+        // Watch for browser/canvas resize events
+        window.addEventListener("resize", function () {
+            engine.resize();
+        });  
+    
+    </script>
+</body>
+</html>
