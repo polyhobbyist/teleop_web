@@ -79,11 +79,24 @@
         // Create joystick and set z index to be below playgrounds top bar
         var leftJoystick = new BABYLON.VirtualJoystick(true);
         BABYLON.VirtualJoystick.Canvas.style.zIndex = "4";
-    
+
+        leftJoystick.limitToContainer = true;
+        leftJoystick.containerSize = 100;
+        
         scene.onBeforeRenderObservable.add(()=>{
             if (leftJoystick.pressed) {
-                // todo
-            }
+
+              var left_LeftRight = leftJoystick.deltaPosition.x;
+              var left_UpDown = leftJoystick.deltaPosition.y;
+              
+              var joyMsg = new ROSLIB.Message({
+                axes: [left_LeftRight, left_UpDown, 0.0, 0.0, 0.0, 0.0],
+                buttons: [false, false, false, false, false, false, false, false, leftJoystick.pressed, false],
+            });
+
+            joyPub.publish(joyMsg);
+
+          }
         })
     
         return scene;    
