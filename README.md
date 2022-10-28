@@ -45,13 +45,13 @@ ros2 launch rosbridge_server rosbridge_websocket_launch.xml certfile:=c:\ws\cert
 ros2 launch teleop_web teleop_web.launch.py certfile:=c:\ws\certs\localhost+1.pem keyfile:=c:\ws\certs\localhost+1-key.pem
 ```
 
-# Using on a remote Web Browser
-You can now connect a Gamepad.
-> NOTE: On Screen Gamepad coming soon.
-
 # Setting up a Steamdeck
 Follow [these instructions](https://support.microsoft.com/en-us/topic/xbox-cloud-gaming-in-microsoft-edge-with-steam-deck-43dd011b-0ce8-4810-8302-965be6d53296) for setting up a Microsoft Edge Browser with a Gamepad.
 
-Navgiate to https://<IP of your robot>:8088.
+# Using on any Web Browser which supports WebGL and Web Sockets
+You can now connect a Gamepad.
+> NOTE: On Screen Gamepad coming soon.
+
+Navgiate to `https://<IP of your robot>:8088`.
 
 
