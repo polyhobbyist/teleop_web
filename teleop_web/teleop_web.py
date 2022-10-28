@@ -59,6 +59,11 @@ class TeleopHandler(tornado.web.RequestHandler):
         shareDir = get_package_share_directory('teleop_web')
         self.render(os.path.join(shareDir, "webroot/teleop_web.html"))
 
+class GUIHandler(tornado.web.RequestHandler):
+    def get(self):
+        shareDir = get_package_share_directory('teleop_web')
+        self.render(os.path.join(shareDir, "webroot/joystick_gui.json"))
+
 class TeleopWebNode(Node):
     def __init__(self):
         super().__init__("teleop_web_node")
@@ -93,6 +98,8 @@ class TeleopWebNode(Node):
 
         handlers = [
             (r"/", TeleopHandler),
+            (r"/joystick_gui.json", GUIHandler),
+            
         ]
 
         application = Application(handlers)

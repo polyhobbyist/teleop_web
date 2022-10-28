@@ -7,6 +7,7 @@
     <script type="text/javascript" src="https://static.robotwebtools.org/roslibjs/current/roslib.min.js"></script>
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
     <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+    <script src="https://cdn.babylonjs.com/gui/babylon.gui.min.js"></script>
     <script src="https://code.jquery.com/pep/0.4.3/pep.js"></script>
 
     <style>
@@ -68,37 +69,98 @@
         name : '/joy',
         messageType : 'sensor_msgs/Joy'
       });
+
+      var aDown = false;
+      var bDown = false;
+      var xDown = false;
+      var yDown = false;
+
+      var xLeftPos = 0;
+      var yLeftPos = 0;
+
+      var sideJoystickOffset = 0;
+      var bottomJoystickOffset = 0;
+
+      var leftJoystick = null;
     
-      const CreateTeleopScene = function () {
+      const CreateTeleopScene = async function () {
         const scene = new BABYLON.Scene(engine);
 
         var camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(0, 5, -10), scene);
         camera.setTarget(BABYLON.Vector3.Zero());
         var light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 1, 0), scene);        
     
-        // Create joystick and set z index to be below playgrounds top bar
-        var leftJoystick = new BABYLON.VirtualJoystick(true);
-        BABYLON.VirtualJoystick.Canvas.style.zIndex = "4";
 
-        leftJoystick.limitToContainer = true;
-        leftJoystick.containerSize = 100;
+        let advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("GUI", true, scene);
+        let loadedGUI = await advancedTexture.parseFromURLAsync("/joystick_gui.json", true);
+
+        let left_puck = advancedTexture.getControlByName("Left_Puck");
+        let left_thumb = advancedTexture.getControlByName("Left_ThumbContainer");
+        let left_inner_thumb = advancedTexture.getControlByName("Left_InnerThumb");
+
+        left_inner_thumb.isPointerBlocker = true;
+        left_thumb.isPointerBlocker = true;
+        left_puck.isPointerBlocker = true;
+
+        sideJoystickOffset = left_thumb.left;
+        bottomJoystickOffset = left_thumb.top;
         
-        scene.onBeforeRenderObservable.add(()=>{
-            if (leftJoystick.pressed) {
+        left_thumb.onPointerDownObservable.add(function(coordinates) {
+          left_puck.isVisible = true;
+          left_puck.floatLeft = coordinates.x-(left_thumb._currentMeasure.width*.5)-sideJoystickOffset;
+          left_puck.left = left_puck.floatLeft;
+          left_puck.floatTop = loadedGUI._canvas.height - coordinates.y-(left_thumb._currentMeasure.height*.5)+bottomJoystickOffset;
+          left_puck.top = left_puck.floatTop*-1;
+          left_puck.isDown = true;
+          left_thumb.alpha = 0.9;
+        });
 
-              var left_LeftRight = leftJoystick.deltaPosition.x;
-              var left_UpDown = leftJoystick.deltaPosition.y;
-              
-              var joyMsg = new ROSLIB.Message({
-                axes: [left_LeftRight, left_UpDown, 0.0, 0.0, 0.0, 0.0],
-                buttons: [false, false, false, false, false, false, false, false, leftJoystick.pressed, false],
-            });
+        left_thumb.onPointerUpObservable.add(function(coordinates) {
+            xAddPos = 0;
+            yAddPos = 0;
+            left_puck.isDown = false;
+            left_puck.isVisible = false;
+            left_thumb.alpha = 0.4;
+        });
 
-            joyPub.publish(joyMsg);
 
-          }
-        })
+        left_thumb.onPointerMoveObservable.add(function(coordinates) {
+            if (left_puck.isDown) {
+                xAddPos = coordinates.x-(left_thumb._currentMeasure.width*.5)-sideJoystickOffset;
+                yAddPos = loadedGUI._canvas.height - coordinates.y-(left_thumb._currentMeasure.height*.5)+bottomJoystickOffset;
+                left_puck.floatLeft = xAddPos;
+                left_puck.floatTop = yAddPos*-1;
+                left_puck.left = left_puck.floatLeft;
+                left_puck.top = left_puck.floatTop;
+              }
+        });
+
+
+        let a = advancedTexture.getControlByName("A_Button");
+        let b = advancedTexture.getControlByName("B_Button");
+        let x = advancedTexture.getControlByName("X_Button");
+        let y = advancedTexture.getControlByName("Y_Button");
+
+        
+        a.onPointerDownObservable.add(() => {aDown = true});        
+        a.onPointerUpObservable.add(() => {aDown = false});        
+
+        b.onPointerDownObservable.add(() => {bDown = true});        
+        b.onPointerUpObservable.add(() => {bDown = false});        
+
+        x.onPointerDownObservable.add(() => {xDown = true});        
+        x.onPointerUpObservable.add(() => {xDown = false});        
+
+        y.onPointerDownObservable.add(() => {yDown = true});        
+        y.onPointerUpObservable.add(() => {yDown = false});        
+
+        engine.runRenderLoop(function () {
+            if (scene != null) {
+              scene.render();
+            }
+          });
     
+       
         return scene;    
       }
     
@@ -138,13 +200,19 @@
             });
 
             joyPub.publish(joyMsg);
+        } else if (leftJoystick != null) {
+            var left_LeftRight = xAddPos/3000;
+            var left_UpDown = yAddPos/3000;
+            
+            var joyMsg = new ROSLIB.Message({
+              axes: [left_LeftRight, left_UpDown, 0.0, 0.0, 0.0, 0.0],
+              buttons: [aDown, bDown, xDown, yDown, false, false, false, false, leftJoystick.pressed, false],
+            });
+
+            joyPub.publish(joyMsg);
+
         }
       }, 20);
-    
-      engine.runRenderLoop(function () {
-            currentScene.render();
-    
-          });
     
         // Watch for browser/canvas resize events
         window.addEventListener("resize", function () {
