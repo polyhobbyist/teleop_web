@@ -43,8 +43,9 @@
       // Connecting to ROS
       // -----------------
     
-      
-    
+
+      try
+      {
       var ros = new ROSLIB.Ros({
         url : 'wss://' + window.location.hostname + ':9090'
       });
@@ -60,6 +61,11 @@
       ros.on('close', function() {
         console.log('Connection to websocket server closed.');
       });
+    }
+    catch
+    {
+
+    }
     
       // Publishing a Topic
       // ------------------
@@ -78,9 +84,6 @@
       var xLeftPos = 0;
       var yLeftPos = 0;
 
-      var sideJoystickOffset = 0;
-      var bottomJoystickOffset = 0;
-
       var leftJoystick = null;
     
       const CreateTeleopScene = async function () {
@@ -92,25 +95,25 @@
     
 
         let advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("GUI", true, scene);
-        let loadedGUI = await advancedTexture.parseFromURLAsync("/joystick_gui.json", true);
+        let loadedGUI = await advancedTexture.parseFromURLAsync("joystick_gui.json");
 
         let left_puck = advancedTexture.getControlByName("Left_Puck");
         let left_thumb = advancedTexture.getControlByName("Left_ThumbContainer");
         let left_inner_thumb = advancedTexture.getControlByName("Left_InnerThumb");
 
-        left_inner_thumb.isPointerBlocker = true;
         left_thumb.isPointerBlocker = true;
-        left_puck.isPointerBlocker = true;
+        left_puck.isPointerBlocker = false;
+        left_inner_thumb.isPointerBlocker = false;
+        left_thumb.alpha = 0.4;
+        left_puck.isVisible = false;
 
-        sideJoystickOffset = left_thumb.left;
-        bottomJoystickOffset = left_thumb.top;
-        
         left_thumb.onPointerDownObservable.add(function(coordinates) {
+          coordinates = left_thumb.getLocalCoordinates(coordinates)
           left_puck.isVisible = true;
-          left_puck.floatLeft = coordinates.x-(left_thumb._currentMeasure.width*.5)-sideJoystickOffset;
+          left_puck.floatLeft = coordinates.x-(left_thumb._currentMeasure.width*.5);
           left_puck.left = left_puck.floatLeft;
-          left_puck.floatTop = loadedGUI._canvas.height - coordinates.y-(left_thumb._currentMeasure.height*.5)+bottomJoystickOffset;
-          left_puck.top = left_puck.floatTop*-1;
+          left_puck.floatTop = coordinates.y-(left_thumb._currentMeasure.height*.5);
+          left_puck.top = left_puck.floatTop;
           left_puck.isDown = true;
           left_thumb.alpha = 0.9;
         });
@@ -126,10 +129,11 @@
 
         left_thumb.onPointerMoveObservable.add(function(coordinates) {
             if (left_puck.isDown) {
-                xAddPos = coordinates.x-(left_thumb._currentMeasure.width*.5)-sideJoystickOffset;
-                yAddPos = loadedGUI._canvas.height - coordinates.y-(left_thumb._currentMeasure.height*.5)+bottomJoystickOffset;
+                coordinates = left_thumb.getLocalCoordinates(coordinates)
+                xAddPos = coordinates.x-(left_thumb._currentMeasure.width*.5);
+                yAddPos = coordinates.y-(left_thumb._currentMeasure.height*.5);
                 left_puck.floatLeft = xAddPos;
-                left_puck.floatTop = yAddPos*-1;
+                left_puck.floatTop = yAddPos;
                 left_puck.left = left_puck.floatLeft;
                 left_puck.top = left_puck.floatTop;
               }
