@@ -43,6 +43,12 @@
       // Connecting to ROS
       // -----------------
     
+<<<<<<< HEAD
+=======
+
+      try
+      {
+>>>>>>> 1b61797f407ddb6d1764dfe07542c39e20a44cbc
       var ros = new ROSLIB.Ros({
         url : 'wss://' + window.location.hostname + ':9090'
       });
@@ -58,6 +64,11 @@
       ros.on('close', function() {
         console.log('Connection to websocket server closed.');
       });
+    }
+    catch
+    {
+
+    }
     
       // Publishing a Topic
       // ------------------
@@ -75,9 +86,6 @@
       var xAddPos = 0;
       var yAddPos = 0;
 
-      var sideJoystickOffset = 0;
-      var bottomJoystickOffset = 0;
-
       var leftJoystick = null;
       var virtualJoystickTexture = null;
       var loadedGUI = null;
@@ -93,14 +101,20 @@
         var light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 1, 0), scene);        
     
 
+<<<<<<< HEAD
         virtualJoystickTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("GUI", true, scene);
         loadedGUI = await virtualJoystickTexture.parseFromURLAsync("/joystick_gui.json", false);
         //loadedGUI = await virtualJoystickTexture.parseFromSnippetAsync("2A4YES#2", false);
+=======
+        let advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("GUI", true, scene);
+        let loadedGUI = await advancedTexture.parseFromURLAsync("joystick_gui.json");
+>>>>>>> 1b61797f407ddb6d1764dfe07542c39e20a44cbc
 
         left_puck = virtualJoystickTexture.getControlByName("Left_Puck");
         let left_thumb = virtualJoystickTexture.getControlByName("Left_ThumbContainer");
         let left_inner_thumb = virtualJoystickTexture.getControlByName("Left_InnerThumb");
 
+<<<<<<< HEAD
         left_inner_thumb.isPointerBlocker = false;
         left_thumb.isPointerBlocker = true;
         left_puck.isPointerBlocker = false;
@@ -112,10 +126,26 @@
         sideJoystickOffset = left_thumb.floatLeft;
         bottomJoystickOffset = left_thumb.floatTop;
         
+=======
+        left_thumb.isPointerBlocker = true;
+        left_puck.isPointerBlocker = false;
+        left_inner_thumb.isPointerBlocker = false;
+        left_thumb.alpha = 0.4;
+        left_puck.isVisible = false;
+
+>>>>>>> 1b61797f407ddb6d1764dfe07542c39e20a44cbc
         left_thumb.onPointerDownObservable.add(function(coordinates) {
+          coordinates = left_thumb.getLocalCoordinates(coordinates)
           left_puck.isVisible = true;
+<<<<<<< HEAD
           left_puck.floatLeft = left_puck.left = coordinates.x - left_thumb._currentMeasure.left - left_thumb._currentMeasure.width * left_puck.transformCenterX;
           left_puck.floatTop = left_puck.top = coordinates.y - left_thumb._currentMeasure.top - left_thumb._currentMeasure.height * left_puck.transformCenterY;
+=======
+          left_puck.floatLeft = coordinates.x-(left_thumb._currentMeasure.width*.5);
+          left_puck.left = left_puck.floatLeft;
+          left_puck.floatTop = coordinates.y-(left_thumb._currentMeasure.height*.5);
+          left_puck.top = left_puck.floatTop;
+>>>>>>> 1b61797f407ddb6d1764dfe07542c39e20a44cbc
           left_puck.isDown = true;
           left_thumb.alpha = 0.9;
         });
@@ -130,11 +160,21 @@
 
         left_thumb.onPointerMoveObservable.add(function(coordinates) {
             if (left_puck.isDown) {
+<<<<<<< HEAD
                 left_puck.floatLeft = left_puck.left = coordinates.x - left_thumb._currentMeasure.left - left_thumb._currentMeasure.width * left_puck.transformCenterX;
                 left_puck.floatTop = left_puck.top = coordinates.y - left_thumb._currentMeasure.top - left_thumb._currentMeasure.height * left_puck.transformCenterY;
 
                 xAddPos = left_puck.floatLeft / (left_thumb._currentMeasure.width / 2);
                 yAddPos = left_puck.floatTop / (left_thumb._currentMeasure.height / 2);
+=======
+                coordinates = left_thumb.getLocalCoordinates(coordinates)
+                xAddPos = coordinates.x-(left_thumb._currentMeasure.width*.5);
+                yAddPos = coordinates.y-(left_thumb._currentMeasure.height*.5);
+                left_puck.floatLeft = xAddPos;
+                left_puck.floatTop = yAddPos;
+                left_puck.left = left_puck.floatLeft;
+                left_puck.top = left_puck.floatTop;
+>>>>>>> 1b61797f407ddb6d1764dfe07542c39e20a44cbc
               }
         });
 
