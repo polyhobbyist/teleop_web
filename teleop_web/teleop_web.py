@@ -57,11 +57,13 @@ def shutdown_hook():
 class TeleopHandler(tornado.web.RequestHandler):
     def get(self):
         shareDir = get_package_share_directory('teleop_web')
+        self.set_header("Cache-control", "no-cache")
         self.render(os.path.join(shareDir, "webroot/teleop_web.html"))
 
 class GUIHandler(tornado.web.RequestHandler):
     def get(self):
         shareDir = get_package_share_directory('teleop_web')
+        self.set_header("Cache-control", "no-cache")
         self.render(os.path.join(shareDir, "webroot/joystick_gui.json"))
 
 class TeleopWebNode(Node):

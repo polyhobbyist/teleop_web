@@ -43,8 +43,6 @@
       // Connecting to ROS
       // -----------------
     
-      
-    
       var ros = new ROSLIB.Ros({
         url : 'wss://' + window.location.hostname + ':9090'
       });
@@ -63,7 +61,6 @@
     
       // Publishing a Topic
       // ------------------
-    
       var joyPub = new ROSLIB.Topic({
         ros : ros,
         name : '/joy',
@@ -75,42 +72,50 @@
       var xDown = false;
       var yDown = false;
 
-      var xLeftPos = 0;
-      var yLeftPos = 0;
+      var xAddPos = 0;
+      var yAddPos = 0;
 
       var sideJoystickOffset = 0;
       var bottomJoystickOffset = 0;
 
       var leftJoystick = null;
+      var virtualJoystickTexture = null;
+      var loadedGUI = null;
+      var left_puck = null;
     
       const CreateTeleopScene = async function () {
         const scene = new BABYLON.Scene(engine);
+
+        // scene.debugLayer.show();
 
         var camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(0, 5, -10), scene);
         camera.setTarget(BABYLON.Vector3.Zero());
         var light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 1, 0), scene);        
     
 
-        let advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("GUI", true, scene);
-        let loadedGUI = await advancedTexture.parseFromURLAsync("/joystick_gui.json", true);
+        virtualJoystickTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("GUI", true, scene);
+        loadedGUI = await virtualJoystickTexture.parseFromURLAsync("/joystick_gui.json", false);
+        //loadedGUI = await virtualJoystickTexture.parseFromSnippetAsync("2A4YES#2", false);
 
-        let left_puck = advancedTexture.getControlByName("Left_Puck");
-        let left_thumb = advancedTexture.getControlByName("Left_ThumbContainer");
-        let left_inner_thumb = advancedTexture.getControlByName("Left_InnerThumb");
+        left_puck = virtualJoystickTexture.getControlByName("Left_Puck");
+        let left_thumb = virtualJoystickTexture.getControlByName("Left_ThumbContainer");
+        let left_inner_thumb = virtualJoystickTexture.getControlByName("Left_InnerThumb");
 
-        left_inner_thumb.isPointerBlocker = true;
+        left_inner_thumb.isPointerBlocker = false;
         left_thumb.isPointerBlocker = true;
-        left_puck.isPointerBlocker = true;
+        left_puck.isPointerBlocker = false;
 
-        sideJoystickOffset = left_thumb.left;
-        bottomJoystickOffset = left_thumb.top;
+        
+
+        left_puck.isVisible = false;
+
+        sideJoystickOffset = left_thumb.floatLeft;
+        bottomJoystickOffset = left_thumb.floatTop;
         
         left_thumb.onPointerDownObservable.add(function(coordinates) {
           left_puck.isVisible = true;
-          left_puck.floatLeft = coordinates.x-(left_thumb._currentMeasure.width*.5)-sideJoystickOffset;
-          left_puck.left = left_puck.floatLeft;
-          left_puck.floatTop = loadedGUI._canvas.height - coordinates.y-(left_thumb._currentMeasure.height*.5)+bottomJoystickOffset;
-          left_puck.top = left_puck.floatTop*-1;
+          left_puck.floatLeft = left_puck.left = coordinates.x - left_thumb._currentMeasure.left - left_thumb._currentMeasure.width * left_puck.transformCenterX;
+          left_puck.floatTop = left_puck.top = coordinates.y - left_thumb._currentMeasure.top - left_thumb._currentMeasure.height * left_puck.transformCenterY;
           left_puck.isDown = true;
           left_thumb.alpha = 0.9;
         });
@@ -123,23 +128,20 @@
             left_thumb.alpha = 0.4;
         });
 
-
         left_thumb.onPointerMoveObservable.add(function(coordinates) {
             if (left_puck.isDown) {
-                xAddPos = coordinates.x-(left_thumb._currentMeasure.width*.5)-sideJoystickOffset;
-                yAddPos = loadedGUI._canvas.height - coordinates.y-(left_thumb._currentMeasure.height*.5)+bottomJoystickOffset;
-                left_puck.floatLeft = xAddPos;
-                left_puck.floatTop = yAddPos*-1;
-                left_puck.left = left_puck.floatLeft;
-                left_puck.top = left_puck.floatTop;
+                left_puck.floatLeft = left_puck.left = coordinates.x - left_thumb._currentMeasure.left - left_thumb._currentMeasure.width * left_puck.transformCenterX;
+                left_puck.floatTop = left_puck.top = coordinates.y - left_thumb._currentMeasure.top - left_thumb._currentMeasure.height * left_puck.transformCenterY;
+
+                xAddPos = left_puck.floatLeft / (left_thumb._currentMeasure.width / 2);
+                yAddPos = left_puck.floatTop / (left_thumb._currentMeasure.height / 2);
               }
         });
 
-
-        let a = advancedTexture.getControlByName("A_Button");
-        let b = advancedTexture.getControlByName("B_Button");
-        let x = advancedTexture.getControlByName("X_Button");
-        let y = advancedTexture.getControlByName("Y_Button");
+        let a = virtualJoystickTexture.getControlByName("A_Button");
+        let b = virtualJoystickTexture.getControlByName("B_Button");
+        let x = virtualJoystickTexture.getControlByName("X_Button");
+        let y = virtualJoystickTexture.getControlByName("Y_Button");
 
         
         a.onPointerDownObservable.add(() => {aDown = true});        
@@ -152,21 +154,24 @@
         x.onPointerUpObservable.add(() => {xDown = false});        
 
         y.onPointerDownObservable.add(() => {yDown = true});        
-        y.onPointerUpObservable.add(() => {yDown = false});        
-
+        y.onPointerUpObservable.add(() => {yDown = false});
+        
         engine.runRenderLoop(function () {
             if (scene != null) {
               scene.render();
             }
           });
     
+        engine.resize();
+
        
         return scene;    
       }
     
       window.addEventListener("gamepadconnected", (event) => {
         // if we have a gamepad, disable the screen controller
-        BABYLON.VirtualJoystick.Canvas.style.zIndex = "-1";
+        loadedGUI._canvas.style.visibility = "hidden";
+
         console.log("Gamepad connected at index %d: %s. %d buttons, %d axes.",
             event.gamepad.index, event.gamepad.id,
             event.gamepad.buttons.length, event.gamepad.axes.length);
@@ -174,7 +179,7 @@
     
       window.addEventListener("gamepaddisconnected", (event) => {
         // if we don't have a gamepad, enable the screen controller
-        BABYLON.VirtualJoystick.Canvas.style.zIndex = "4";
+        loadedGUI._canvas.style.visibility = "visible";
       });
     
       var currentScene = CreateTeleopScene();
@@ -200,13 +205,18 @@
             });
 
             joyPub.publish(joyMsg);
-        } else if (leftJoystick != null) {
-            var left_LeftRight = xAddPos/3000;
-            var left_UpDown = yAddPos/3000;
+        } else {
+            var left_LeftRight = xAddPos;
+            var left_UpDown = yAddPos;
+            var hatPressed = false;
+            if (left_puck.isDown) {
+              hatPressed = true;
+            }
+
             
             var joyMsg = new ROSLIB.Message({
               axes: [left_LeftRight, left_UpDown, 0.0, 0.0, 0.0, 0.0],
-              buttons: [aDown, bDown, xDown, yDown, false, false, false, false, leftJoystick.pressed, false],
+              buttons: [aDown, bDown, xDown, yDown, false, false, false, false, hatPressed, false],
             });
 
             joyPub.publish(joyMsg);
@@ -214,10 +224,10 @@
         }
       }, 20);
     
-        // Watch for browser/canvas resize events
-        window.addEventListener("resize", function () {
-            engine.resize();
-        });  
+      // Watch for browser/canvas resize events
+      window.addEventListener("resize", function () {
+          engine.resize();
+      });  
     
     </script>
 </body>
